@@ -1,6 +1,7 @@
 # Copilot_Azure_OpenAI
 Demonstrates how to setup Azure Open AI with Azure AI Search for Copilot to connect
 
+https://microsoftlearning.github.io/mslearn-openai/Instructions/Exercises/02-use-own-data.html
 
 # Implement Retrieval Augmented Generation (RAG) with Azure OpenAI Service
 The Azure OpenAI Service enables you to use your own data with the intelligence of the underlying LLM. You can limit the model to only use your data for pertinent topics, or blend it with results from the pre-trained model.
