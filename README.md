@@ -3,7 +3,7 @@ Demonstrates how to setup Azure Open AI with Azure AI Search for Copilot to conn
 
 https://microsoftlearning.github.io/mslearn-ai-studio/Instructions/04-Use-own-data.html
 
-Create a generative AI app that uses your own data
+# Create a generative AI app that uses your own data
 Retrieval Augmented Generation (RAG) is a technique used to build applications that integrate data from custom data sources into a prompt for a generative AI model. RAG is a commonly used pattern for developing generative AI apps - chat-based applications that use a language model to interpret inputs and generate appropriate responses.
 
 In this exercise, you’ll use Azure AI Foundry to integrate custom data into a generative AI solution.
@@ -190,3 +190,9 @@ To avoid unnecessary Azure costs and resource utilization, you should remove the
 
 If you’ve finished exploring Azure AI Foundry, return to the Azure portal at https://portal.azure.com and sign in using your Azure credentials if necessary. Then delete the resources in the resource group where you provisioned your Azure AI Search and Azure AI resources.
 When you’re done with your Azure OpenAI resource, remember to delete the resources in the Azure portal at https://portal.azure.com. Be sure to also include the storage account and search resource, as those can incur a relatively large cost.
+
+# Connect your data to Azure OpenAI for generative answers (preview)
+
+https://learn.microsoft.com/en-us/microsoft-copilot-studio/nlu-generative-answers-azure-openai
+
+
