@@ -1,227 +1,192 @@
 # Copilot_Azure_OpenAI
 Demonstrates how to setup Azure Open AI with Azure AI Search for Copilot to connect
 
-https://microsoftlearning.github.io/mslearn-openai/Instructions/Exercises/02-use-own-data.html
+https://microsoftlearning.github.io/mslearn-ai-studio/Instructions/04-Use-own-data.html
 
-# Implement Retrieval Augmented Generation (RAG) with Azure OpenAI Service
-The Azure OpenAI Service enables you to use your own data with the intelligence of the underlying LLM. You can limit the model to only use your data for pertinent topics, or blend it with results from the pre-trained model.
+Create a generative AI app that uses your own data
+Retrieval Augmented Generation (RAG) is a technique used to build applications that integrate data from custom data sources into a prompt for a generative AI model. RAG is a commonly used pattern for developing generative AI apps - chat-based applications that use a language model to interpret inputs and generate appropriate responses.
 
-In the scenario for this exercise, you will perform the role of a software developer working for Margie’s Travel Agency. You will explore how use Azure AI Search to index your own data and use it with Azure OpenAI to augment prompts.
+In this exercise, you’ll use Azure AI Foundry to integrate custom data into a generative AI solution.
 
-This exercise will take approximately 30 minutes.
+Note: The code in this exercise is based on pre-release SDK software, which may be subject to change. Where necessary, we’ve used specific versions of packages; which may not reflect the latest available versions. You may experience some unexpected behavior, warnings, or errors.
 
-Provision Azure resources
-To complete this exercise, you’ll need:
+While this exercise is based on the Azure OpenAI Python SDK, you can develop AI chat applications using multiple language-specific SDKs; including:
 
-An Azure OpenAI resource.
-An Azure AI Search resource.
-An Azure Storage Account resource.
-Sign into the Azure portal at https://portal.azure.com.
-Create an Azure OpenAI resource with the following settings:
-Subscription: Select an Azure subscription that has been approved for access to the Azure OpenAI service
-Resource group: Choose or create a resource group
-Region: Make a random choice from any of the following regions*
-Canada East
-East US
-East US 2
-France Central
-Japan East
-North Central US
-Sweden Central
-Switzerland North
-UK South
-Name: A unique name of your choice
-Pricing tier: Standard S0
-* Azure OpenAI resources are constrained by regional quotas. The listed regions include default quota for the model type(s) used in this exercise. Randomly choosing a region reduces the risk of a single region reaching its quota limit in scenarios where you are sharing a subscription with other users. In the event of a quota limit being reached later in the exercise, there’s a possibility you may need to create another resource in a different region.
+OpenAI for Python
+Azure Open AI for Microsoft .NET
+Azure OpenAI for TypeScript
+This exercise takes approximately 45 minutes.
 
-While the Azure OpenAI resource is being provisioned, create an Azure AI Search resource with the following settings:
-Subscription: The subscription in which you provisioned your Azure OpenAI resource
-Resource group: The resource group in which you provisioned your Azure OpenAI resource
-Service name: A unique name of your choice
-Location: The region in which you provisioned your Azure OpenAI resource
+Create an Azure AI Foundry hub and project
+The features of Azure AI Foundry we’re going to use in this exercise require a project that is based on an Azure AI Foundry hub resource.
+
+In a web browser, open the Azure AI Foundry portal at https://ai.azure.com and sign in using your Azure credentials. Close any tips or quick start panes that are opened the first time you sign in, and if necessary use the Azure AI Foundry logo at the top left to navigate to the home page, which looks similar to the following image (close the Help pane if it’s open):
+
+Screenshot of Azure AI Foundry portal.
+
+In the browser, navigate to https://ai.azure.com/managementCenter/allResources and select Create new. Then choose the option to create a new AI hub resource.
+In the Create a project wizard, enter a valid name for your project, and select the option to create a new hub. Then use the Rename hub link to specify a valid name for your new hub, expand Advanced options, and specify the following settings for your project:
+Subscription: Your Azure subscription
+Resource group: Create or select a resource group
+Region: East US 2 or Sweden Central (In the event of a quota limit being exceeded later in the exercise, you may need to create another resource in a different region.)
+Note: If you’re working in an Azure subscription in which policies are used to restrict allowable resource names, you may need to use the link at the bottom of the Create a new project dialog box to create the hub using the Azure portal.
+
+Tip: If the Create button is still disabled, be sure to rename your hub to a unique alphanumeric value.
+
+Wait for your project to be created, and then navigate to your project.
+Deploy models
+You need two models to implement your solution:
+
+An embedding model to vectorize text data for efficient indexing and processing.
+A model that can generate natural language responses to questions based on your data.
+In the Azure AI Foundry portal, in your project, in the navigation pane on the left, under My assets, select the Models + endpoints page.
+Create a new deployment of the text-embedding-ada-002 model with the following settings by selecting Customize in the Deploy model wizard:
+
+Deployment name: A valid name for your model deployment
+Deployment type: Global Standard
+Model version: Select the default version
+Connected AI resource: Select the resource created previously
+Tokens per Minute Rate Limit (thousands): 50K (or the maximum available in your subscription if less than 50K)
+Content filter: DefaultV2
+Note: If your current AI resource location doesn’t have quota available for the model you want to deploy, you will be asked to choose a different location where a new AI resource will be created and connected to your project.
+
+Return to the Models + endpoints page and repeat the previous steps to deploy a gpt-4o model using a Global Standard deployment of the most recent version with a TPM rate limit of 50K (or the maximum available in your subscription if less than 50K).
+
+Note: Reducing the Tokens Per Minute (TPM) helps avoid over-using the quota available in the subscription you are using. 50,000 TPM is sufficient for the data used in this exercise.
+
+Add data to your project
+The data for your app consists of a set of travel brochures in PDF format from the fictitious travel agency Margie’s Travel. Let’s add them to the project.
+
+In a new browser tab, download the zipped archive of brochures from https://github.com/MicrosoftLearning/mslearn-ai-studio/raw/main/data/brochures.zip and extract it to a folder named brochures on your local file system.
+In Azure AI Foundry portal, in your project, in the navigation pane on the left, under My assets, select the Data + indexes page.
+Select + New data.
+In the Add your data wizard, expand the drop-down menu to select Upload files/folders.
+Select Upload folder and upload the brochures folder. Wait until all the files in the folder are listed.
+Select Next and set the data name to brochures.
+Wait for the folder to be uploaded and note that it contains several .pdf files.
+Create an index for your data
+Now that you’ve added a data source to your project, you can use it to create an index in your Azure AI Search resource.
+
+In Azure AI Foundry portal, in your project, in the navigation pane on the left, under My assets, select the Data + indexes page.
+In the Indexes tab, add a new index with the following settings:
+Source location:
+Data source: Data in Azure AI Foundry
+Select the brochures data source
+Index configuration:
+Select Azure AI Search service: Create a new Azure AI Search resource with the following settings:
+Subscription: You Azure subscription
+Resource group: The same resource group as your AI hub
+Service name: A valid name for your AI Search Resource
+Location: The same location as your AI hub
 Pricing tier: Basic
-While the Azure AI Search resource is being provisioned, create a Storage account resource with the following settings:
-Subscription: The subscription in which you provisioned your Azure OpenAI resource
-Resource group: The resource group in which you provisioned your Azure OpenAI resource
-Storage account name: A unique name of your choice
-Region: The region in which you provisioned your Azure OpenAI resource
-Primary service: Azure Blob Storage or Azure Data Lake Storage Gen 2
-Performance: Standard
-Redundancy: Locally redundant storage (LRS)
-After all three of the resources have been successfully deployed in your Azure subscription, review them in the Azure portal and gather the following information (which you’ll need later in the exercise):
-The endpoint and a key from the Azure OpenAI resource you created (available on the Keys and Endpoint page for your Azure OpenAI resource in the Azure portal)
-The endpoint for your Azure AI Search service (the Url value on the overview page for your Azure AI Search resource in the Azure portal).
-A primary admin key for your Azure AI Search resource (available in the Keys page for your Azure AI Search resource in the Azure portal).
-Upload your data
-You’re going to ground the prompts you use with a generative AI model by using your own data. In this exercise, the data consists of a collection of travel brochures from the fictional Margies Travel company.
+Wait for the AI Search resource to be created. Then return to the Azure AI Foundry and finish configuring the index by selecting Connect other Azure AI Search resource and adding a connection to the AI Search resource you just created.
 
-In a new browser tab, download an archive of brochure data from https://aka.ms/own-data-brochures. Extract the brochures to a folder on your PC.
-In the Azure portal, navigate to your storage account and view the Storage browser page.
-Select Blob containers and then add a new container named margies-travel.
-Select the margies-travel container, and then upload the .pdf brochures you extracted previously to the root folder of the blob container.
-Deploy AI models
-You’re going to use two AI models in this exercise:
+Vector index: brochures-index
+Virtual machine: Auto select
+Search settings:
+Vector settings: Add vector search to this search resource
+Azure OpenAI connection: Select the default Azure OpenAI resource for your hub.
+Embedding model: text-embedding-ada-002
+Embedding model deployment: Your deployment of the text-embedding-ada-002 model
+Create the vector index and wait for the indexing process to be completed, which can take a while depending on available compute resources in your subscription.
 
-A text embedding model to vectorize the text in the brochures so it can be indexed efficiently for use in grounding prompts.
-A GPT model that you application can use to generate responses to prompts that are grounded in your data.
-Deploy a model
-Next, you will deploy an Azure OpenAI model resource from the CLI. In the Azure portal; select Cloud Shell icon from the top menu bar and ensure that your terminal is set to Bash. Refer to this example and replace the following variables with your own values:
+The index creation operation consists of the following jobs:
 
-code
-az cognitiveservices account deployment create \
-   -g <your_resource_group> \
-   -n <your_OpenAI_resource> \
-   --deployment-name text-embedding-ada-002 \
-   --model-name text-embedding-ada-002 \
-   --model-version "2"  \
-   --model-format OpenAI \
-   --sku-name "Standard" \
-   --sku-capacity 5
-Note: Sku-capacity is measured in thousands of tokens per minute. A rate limit of 5,000 tokens per minute is more than adequate to complete this exercise while leaving capacity for other people using the same subscription.
+Crack, chunk, and embed the text tokens in your brochures data.
+Create the Azure AI Search index.
+Register the index asset.
+Tip: While you’re waiting for the index to be created, why not take a look at the brochures you downloaded to get familiar with their contents?
 
-After the text embedding model has been deployed, create a new deployment of the gpt-4o model with the following settings:
+Test the index in the playground
+Before using your index in a RAG-based prompt flow, let’s verify that it can be used to affect generative AI responses.
 
-code
-az cognitiveservices account deployment create \
-   -g <your_resource_group> \
-   -n <your_OpenAI_resource> \
-   --deployment-name gpt-4o \
-   --model-name gpt-4o \
-   --model-version "2024-05-13" \
-   --model-format OpenAI \
-   --sku-name "Standard" \
-   --sku-capacity 5
-Create an index
-To make it easy to use your own data in a prompt, you’ll index it using Azure AI Search. You’ll use the text embedding model to vectorize the text data (which results in each text token in the index being represented by numeric vectors - making it compatible with the way a generative AI model represents text)
+In the navigation pane on the left, select the Playgrounds page and open the Chat playground.
+On the Chat playground page, in the Setup pane, ensure that your gpt-4o model deployment is selected. Then, in the main chat session panel, submit the prompt Where can I stay in New York?
+Review the response, which should be a generic answer from the model without any data from the index.
+In the Setup pane, expand the Add your data field, and then add the brochures-index project index and select the hybrid (vector + keyword) search type.
 
-In the Azure portal, navigate to your Azure AI Search resource.
-On the Overview page, select Import and vectorize data.
-In the Setup your data connection page, select Azure Blob Storage and configure the data source with the following settings:
-Subscription: The Azure subscription in which you provisioned your storage account.
-Blob storage account: The storage account you created previously.
-Blob container: margies-travel
-Blob folder: Leave blank
-Enable deletion tracking: Unselected
-Authenticate using managed identity: Unselected
-On the Vectorize your text page, select the following settings:
-Kind: Azure OpenAI
-Subscription: The Azure subscription in which you provisioned your Azure OpenAI service.
-Azure OpenAI Service: Your Azure OpenAI Service resource
-Model deployment: text-embedding-ada-002
-Authentication type: API key
-I acknowledge that connecting to an Azure OpenAI service will incur additional costs to my account: Selected
-On the next page, do not select the option to vectorize images or extract data with AI skills.
-On the next page, enable semantic ranking and schedule the indexer to run once.
-On the final page, set the Objects name prefix to margies-index and then create the index.
-Prepare to develop an app in Visual Studio Code
-Now let’s explore the use of your own data in an app that uses the Azure OpenAI service SDK. You’ll develop your app using Visual Studio Code. The code files for your app have been provided in a GitHub repo.
+Tip: In some cases, newly created indexes may not be available right away. Refreshing the browser usually helps, but if you’re still experiencing the issue where it can’t find the index you may need to wait until the index is recognized.
 
-Tip: If you have already cloned the mslearn-openai repo, open it in Visual Studio code. Otherwise, follow these steps to clone it to your development environment.
+After the index has been added and the chat session has restarted, resubmit the prompt Where can I stay in New York?
+Review the response, which should be based on data in the index.
+Create a RAG client app
+Now that you have a working index, you can use the Azure OpenAI SDK to implement the RAG pattern in a client application. Let’s explore the code to accomplish this in a simple example.
 
-Start Visual Studio Code.
-Open the palette (SHIFT+CTRL+P or View > Command Palette…) and run a Git: Clone command to clone the https://github.com/MicrosoftLearning/mslearn-openai repository to a local folder (it doesn’t matter which folder).
-When the repository has been cloned, open the folder in Visual Studio Code.
+Prepare the application configuration
+Return to the browser tab containing the Azure portal (keeping the Azure AI Foundry portal open in the existing tab).
+Use the [>_] button to the right of the search bar at the top of the page to create a new Cloud Shell in the Azure portal, selecting a PowerShell environment with no storage in your subscription.
 
-Note: If Visual Studio Code shows you a pop-up message to prompt you to trust the code you are opening, click on Yes, I trust the authors option in the pop-up.
+The cloud shell provides a command-line interface in a pane at the bottom of the Azure portal. You can resize or maximize this pane to make it easier to work in.
 
-Wait while additional files are installed to support the C# code projects in the repo.
+Note: If you have previously created a cloud shell that uses a Bash environment, switch it to PowerShell.
 
-Note: If you are prompted to add required assets to build and debug, select Not Now.
+In the cloud shell toolbar, in the Settings menu, select Go to Classic version (this is required to use the code editor).
 
-Configure your application
-Applications for both C# and Python have been provided, and both apps feature the same functionality. First, you’ll complete some key parts of the application to enable using your Azure OpenAI resource.
+Ensure you've switched to the classic version of the cloud shell before continuing.
 
-In Visual Studio Code, in the Explorer pane, browse to the Labfiles/02-use-own-data folder and expand the CSharp or Python folder depending on your language preference. Each folder contains the language-specific files for an app into which you’re going to integrate Azure OpenAI functionality.
-Right-click the CSharp or Python folder containing your code files and open an integrated terminal. Then install the Azure OpenAI SDK package by running the appropriate command for your language preference:
-
-C#:
+In the cloud shell pane, enter the following commands to clone the GitHub repo containing the code files for this exercise (type the command, or copy it to the clipboard and then right-click in the command line and paste as plain text):
 
 code
- dotnet add package Azure.AI.OpenAI --version 2.1.0
- dotnet add package Azure.Search.Documents --version 11.6.0
-Python:
+ rm -r mslearn-ai-foundry -f
+ git clone https://github.com/microsoftlearning/mslearn-ai-studio mslearn-ai-foundry
+Tip: As you paste commands into the cloudshell, the output may take up a large amount of the screen buffer. You can clear the screen by entering the cls command to make it easier to focus on each task.
+
+After the repo has been cloned, navigate to the folder containing the chat application code files:
 
 code
- pip install openai==1.65.2
-In the Explorer pane, in the CSharp or Python folder, open the configuration file for your preferred language
-
-C#: appsettings.json
-Python: .env
-Update the configuration values to include:
-The endpoint and a key from the Azure OpenAI resource you created (available on the Keys and Endpoint page for your Azure OpenAI resource in the Azure portal)
-The deployment name you specified for your gpt-4o model deployment (should be gpt-4o).
-The endpoint for your search service (the Url value on the overview page for your search resource in the Azure portal).
-A key for your search resource (available in the Keys page for your search resource in the Azure portal - you can use either of the admin keys)
-The name of the search index (which should be margies-index).
-Save the configuration file.
-Add code to use the Azure OpenAI service
-Now you’re ready to use the Azure OpenAI SDK to consume your deployed model.
-
-In the Explorer pane, in the CSharp or Python folder, open the code file for your preferred language, and replace the comment Configure your data source with code to your index as a data source for chat completion:
-
-C#: ownData.cs
-
-c#
- // Configure your data source
- // Extension methods to use data sources with options are subject to SDK surface changes. Suppress the warning to acknowledge this and use the subject-to-change AddDataSource method.
- #pragma warning disable AOAI001
-    
- ChatCompletionOptions chatCompletionsOptions = new ChatCompletionOptions()
- {
-     MaxOutputTokenCount = 600,
-     Temperature = 0.9f,
- };
-    
- chatCompletionsOptions.AddDataSource(new AzureSearchChatDataSource()
- {
-     Endpoint = new Uri(azureSearchEndpoint),
-     IndexName = azureSearchIndex,
-     Authentication = DataSourceAuthentication.FromApiKey(azureSearchKey),
- });
-Python: ownData.py
+cd mslearn-ai-foundry/labfiles/rag-app/python
+In the cloud shell command-line pane, enter the following command to install the OpenAI SDK library:
 
 code
- # Configure your data source
- text = input('\nEnter a question:\n')
-    
- completion = client.chat.completions.create(
-     model=deployment,
-     messages=[
-         {
-             "role": "user",
-             "content": text,
-         },
-     ],
-     extra_body={
-         "data_sources":[
-             {
-                 "type": "azure_search",
-                 "parameters": {
-                     "endpoint": os.environ["AZURE_SEARCH_ENDPOINT"],
-                     "index_name": os.environ["AZURE_SEARCH_INDEX"],
-                     "authentication": {
-                         "type": "api_key",
-                         "key": os.environ["AZURE_SEARCH_KEY"],
-                     }
-                 }
-             }
-         ],
-     }
- )
-Save the changes to the code file.
+python -m venv labenv
+./labenv/bin/Activate.ps1
+pip install -r requirements.txt openai
+Enter the following command to edit the configuration file that has been provided:
 
-Run your application
-Now that your app has been configured, run it to send your request to your model and observe the response. You’ll notice the only difference between the different options is the content of the prompt, all other parameters (such as token count and temperature) remain the same for each request.
+code
+code .env
+The file is opened in a code editor.
 
-In the interactive terminal pane, ensure the folder context is the folder for your preferred language. Then enter the following command to run the application.
+In the configuration file, replace the following placeholders:
+your_openai_endpoint: The Open AI endpoint from your project’s Overview page in the Azure AI Foundry portal (be sure to select the Azure OpenAI capability tab, not the Azure AI Inference or Azure AI Services capability).
+your_openai_api_key The Open AI API key from your project’s Overview page in the Azure AI Foundry portal (be sure to select the Azure OpenAI capability tab, not the Azure AI Inference or Azure AI Services capability).
+your_chat_model: The name you assigned to your gpt-4o model deployment, from the Models + endpoints page in the Azure AI Foundry portal (the default name is gpt-4o).
+your_embedding_model: The name you assigned to your text-embedding-ada-002 model deployment, from the Models + endpoints page in the Azure AI Foundry portal (the default name is text-embedding-ada-002).
+your_search_endpoint: The URL for your Azure AI Search resource. You’ll find this in the Management center in the Azure AI Foundry portal.
+your_search_api_key: The API key for your Azure AI Search resource. You’ll find this in the Management center in the Azure AI Foundry portal.
+your_index: Replace with your index name from the Data + indexes page for your project in the Azure AI Foundry portal (it should be brochures-index).
+After you’ve replaced the placeholders, in the code editor, use the CTRL+S command or Right-click > Save to save your changes and then use the CTRL+Q command or Right-click > Quit to close the code editor while keeping the cloud shell command line open.
+Explore code to implement the RAG pattern
+Enter the following command to edit the code file that has been provided:
 
-C#: dotnet run
-Python: python ownData.py
-Tip: You can use the Maximize panel size (^) icon in the terminal toolbar to see more of the console text.
+code
+code rag-app.py
+Review the code in the file, noting that it:
+Creates an Azure OpenAI client using the endpoint, key, and chat model.
+Creates a suitable system message for a travel-related chat solution.
+Submits a prompt (including the system and a user message based on the user input) to the Azure OpenAI client, adding:
+Connection details for the Azure AI Search index to be queried.
+Details of the embedding model to be used to vectorize the query*.
+Displays the response from the grounded prompt.
+Adds the response to the chat history.
+* The query for the search index is based on the prompt, and is used to find relevant text in the indexed documents. You can use a keyword-based search that submits the query as text, but using a vector-based search can be more efficient - hence the use of an embedding model to vectorize the query text before submitting it.
 
-Review the response to the prompt Tell me about London, which should include an answer as well as some details of the data used to ground the prompt, which was obtained from your search service.
+Use the CTRL+Q command to close the code editor without saving any changes, while keeping the cloud shell command line open.
+Run the chat application
+In the cloud shell command-line pane, enter the following command to run the app:
 
-Tip: If you want to see the citations from your search index, set the variable show citations near the top of the code file to true.
+code
+python rag-app.py
+When prompted, enter a question, such as Where should I go on vacation to see architecture? and review the response from your generative AI model.
+
+Note that the response includes source references to indicate the indexed data in which the answer was found.
+
+Try a follow-up question, for example Where can I stay there?
+
+When you’re finished, enter quit to exit the program. Then close the cloud shell pane.
 
 Clean up
+To avoid unnecessary Azure costs and resource utilization, you should remove the resources you deployed in this exercise.
+
+If you’ve finished exploring Azure AI Foundry, return to the Azure portal at https://portal.azure.com and sign in using your Azure credentials if necessary. Then delete the resources in the resource group where you provisioned your Azure AI Search and Azure AI resources.
 When you’re done with your Azure OpenAI resource, remember to delete the resources in the Azure portal at https://portal.azure.com. Be sure to also include the storage account and search resource, as those can incur a relatively large cost.
